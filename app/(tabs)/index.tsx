@@ -1,74 +1,128 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
+import { supabase } from '../../src/supabaseClient'; // Importa o cliente do Supabase
+import Icon from 'react-native-vector-icons/Ionicons'; // Ícone para o menu e botão reset
+import { DrawerNavigationProp } from '@react-navigation/drawer';
+import { useNavigation } from '@react-navigation/native';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+type Message = {
+  id: number;
+  content: string;
+  author: string;
+};
 
-export default function HomeScreen() {
+// Função para buscar uma mensagem aleatória do Supabase
+const getRandomMessage = async (): Promise<Message> => {
+  try {
+    const { data, error } = await supabase
+      .from('Mensagens')
+      .select('*');
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      const randomIndex = Math.floor(Math.random() * data.length);
+      return {
+        id: data[randomIndex].id,
+        content: data[randomIndex].mensagem,
+        author: data[randomIndex].ref,
+      };
+    } else {
+      return {
+        id: 0,
+        content: 'Nenhuma mensagem disponível no momento.',
+        author: 'Sistema',
+      };
+    }
+  } catch (error) {
+    console.error('Erro ao buscar mensagem:', error);
+    return {
+      id: 0,
+      content: 'Erro ao carregar mensagem.',
+      author: 'Sistema',
+    };
+  }
+};
+
+
+export default function IndexScreen() {
+  const [message, setMessage] = useState<Message | null>(null);
+  const navigation = useNavigation<DrawerNavigationProp<any>>();
+
+  // Função para buscar e atualizar uma mensagem aleatória
+  const fetchRandomMessage = async () => {
+    const randomMessage = await getRandomMessage();
+    setMessage(randomMessage);
+  };
+
+  // Carrega uma mensagem ao iniciar a página
+  useEffect(() => {
+    fetchRandomMessage();
+  }, []);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      {/* Botão de Menu */}
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => navigation.openDrawer()}
+      >
+        <Icon name="menu-outline" size={30} color="black" />
+      </TouchableOpacity>
+
+      {/* Mensagem Motivacional */}
+      <View style={styles.messageContainer}>
+        <Text style={styles.messageText}>
+          {message ? message.content : 'Carregando...'}
+        </Text>
+        <Text style={styles.authorText}>
+          {message ? message.author || 'Autor desconhecido' : ''}
+        </Text>
+      </View>
+
+      {/* Botão de Reset */}
+      <TouchableOpacity style={styles.resetButton} onPress={fetchRandomMessage}>
+        <Icon name="refresh-outline" size={30} color="black" />
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    backgroundColor: '#ffffff',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  menuButton: {
     position: 'absolute',
+    top: 20,
+    left: 20,
+  },
+  messageContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  messageText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  authorText: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: '#555555',
+  },
+  resetButton: {
+    marginTop: 20,
   },
 });
